@@ -5,6 +5,7 @@ export const useCamera = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isActive, setIsActive] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export const useCamera = () => {
     async (facingMode: "user" | "environment" = "environment") => {
       try {
         setError(null);
+        setIsInitializing(true);
 
         if (typeof window === "undefined") {
           throw new Error(
@@ -56,11 +58,13 @@ export const useCamera = () => {
         });
 
         setIsActive(true);
+        setIsInitializing(false);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to start camera";
         setError(errorMessage);
         setIsActive(false);
+        setIsInitializing(false);
         console.error("Camera error:", err);
       }
     },
@@ -78,6 +82,7 @@ export const useCamera = () => {
     }
 
     setIsActive(false);
+    setIsInitializing(false);
     setError(null);
   }, []);
 
@@ -121,6 +126,7 @@ export const useCamera = () => {
   return {
     videoRef,
     isActive,
+    isInitializing,
     error,
     startCamera,
     stopCamera,

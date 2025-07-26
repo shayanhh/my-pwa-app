@@ -13,8 +13,15 @@ import {
 export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
   onBack,
 }) => {
-  const { videoRef, isActive, error, startCamera, stopCamera, capturePhoto } =
-    useCamera();
+  const {
+    videoRef,
+    isActive,
+    isInitializing,
+    error,
+    startCamera,
+    stopCamera,
+    capturePhoto,
+  } = useCamera();
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"user" | "environment">(
     "environment"
@@ -144,11 +151,11 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
           autoPlay
         />
 
-        {/* Loading overlay - only show when camera is not active */}
-        {!isActive && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+        {/* Loading overlay - only show when initializing */}
+        {isInitializing && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80">
             <div className="text-center">
-              <Camera className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <Camera className="w-16 h-16 text-gray-400 mx-auto mb-4 animate-pulse" />
               <p className="text-gray-400 text-lg">Initializing camera...</p>
             </div>
           </div>
@@ -160,7 +167,7 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
         <div className="flex items-center justify-center gap-8">
           <button
             onClick={toggleCamera}
-            disabled={!isActive}
+            disabled={!isActive || isInitializing}
             className="p-4 bg-white/20 rounded-full backdrop-blur-sm hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
           >
             <RotateCcw className="w-6 h-6 text-white" />
@@ -168,7 +175,7 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
 
           <button
             onClick={handleCapture}
-            disabled={!isActive}
+            disabled={!isActive || isInitializing}
             className="p-6 bg-white rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg touch-manipulation min-w-[80px] min-h-[80px] flex items-center justify-center"
           >
             <Square className="w-8 h-8 text-gray-800" />

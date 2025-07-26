@@ -61,13 +61,21 @@ export const useQRScanner = (): UseQRScannerReturn => {
         throw new Error("Camera access is not supported by this browser");
       }
 
-      // Reinitialize code reader if it's null
+      // Always ensure we have a fresh code reader instance
       if (!codeReader.current) {
+        console.log("Initializing new code reader");
         initializeCodeReader();
       }
 
       if (!codeReader.current || !videoRef.current) {
         throw new Error("Scanner not initialized");
+      }
+
+      // Reset any previous scanning state
+      try {
+        codeReader.current.reset();
+      } catch (err) {
+        console.warn("Error resetting code reader:", err);
       }
 
       // Check if we're on HTTPS or localhost
@@ -137,8 +145,13 @@ export const useQRScanner = (): UseQRScannerReturn => {
   }, [initializeCodeReader]);
 
   const stopScanning = useCallback(() => {
+    // Only reset the scanner, don't destroy the code reader
     if (codeReader.current) {
-      codeReader.current.reset();
+      try {
+        codeReader.current.reset();
+      } catch (err) {
+        console.warn("Error resetting code reader:", err);
+      }
     }
 
     if (streamRef.current) {
