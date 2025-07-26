@@ -19,7 +19,7 @@ export const useCamera = () => {
       try {
         setError(null);
         setIsInitializing(true);
-        setIsActive(false); // Reset active state during initialization
+        setIsActive(false);
 
         if (typeof window === "undefined") {
           throw new Error(
@@ -57,19 +57,26 @@ export const useCamera = () => {
         // Wait for video to be ready
         await new Promise<void>((resolve, reject) => {
           if (videoRef.current) {
-            const handleLoadedMetadata = () => {
-              // Ensure video is actually playing
-              videoRef.current
-                ?.play()
-                .then(() => {
-                  resolve();
-                })
+            const video = videoRef.current;
+
+            const handleCanPlay = () => {
+              video.removeEventListener("canplay", handleCanPlay);
+              video.removeEventListener("error", handleError);
+
+              video
+                .play()
+                .then(() => resolve())
                 .catch(reject);
             };
 
-            videoRef.current.onloadedmetadata = handleLoadedMetadata;
-            videoRef.current.onerror = () =>
-              reject(new Error("Video loading failed"));
+            const handleError = () => {
+              video.removeEventListener("canplay", handleCanPlay);
+              video.removeEventListener("error", handleError);
+              reject(new Error("Video failed to load"));
+            };
+
+            video.addEventListener("canplay", handleCanPlay);
+            video.addEventListener("error", handleError);
           } else {
             reject(new Error("Video element not available"));
           }
@@ -133,6 +140,7 @@ export const useCamera = () => {
     }
   }, [isActive]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (streamRef.current) {

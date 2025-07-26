@@ -48,18 +48,27 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
     }
   };
 
-  const toggleCamera = async () => {
-    const newFacingMode = facingMode === "user" ? "environment" : "user";
-    setFacingMode(newFacingMode);
-    if (isActive || isInitializing) {
-      stopCamera();
-      // Add a small delay to ensure camera is properly stopped
-      setTimeout(() => startCamera(newFacingMode), 200);
-    } else {
-      startCamera(newFacingMode);
+  const handleRetake = () => {
+    setCapturedImage(null);
+    // Restart camera if it's not active
+    if (!isActive && !isInitializing) {
+      startCamera(facingMode);
     }
   };
 
+  const toggleCamera = async () => {
+    const newFacingMode = facingMode === "user" ? "environment" : "user";
+    setFacingMode(newFacingMode);
+    stopCamera();
+    // Add a small delay to ensure camera is properly stopped
+    setTimeout(() => startCamera(newFacingMode), 300);
+  };
+
+  const retryCamera = () => {
+    startCamera(facingMode);
+  };
+
+  // Photo preview screen
   if (capturedImage) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex flex-col">
@@ -77,7 +86,7 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
           </div>
         </div>
 
-        {/* Image container - takes remaining space minus button area */}
+        {/* Image container */}
         <div className="flex-1 flex items-center justify-center p-4 pb-0">
           <img
             src={capturedImage}
@@ -86,7 +95,7 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
           />
         </div>
 
-        {/* Fixed button container at bottom */}
+        {/* Action buttons */}
         <div className="flex-shrink-0 p-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
           <div className="flex flex-col gap-3 max-w-sm mx-auto">
             <button
@@ -98,7 +107,7 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
             </button>
             <div className="flex gap-3">
               <button
-                onClick={() => setCapturedImage(null)}
+                onClick={handleRetake}
                 className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-full font-medium transition-colors text-sm min-h-[48px] touch-manipulation"
               >
                 <Camera className="w-4 h-4 flex-shrink-0" />
@@ -118,6 +127,7 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
     );
   }
 
+  // Camera screen
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       {/* Header */}
@@ -144,7 +154,7 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
         </div>
       )}
 
-      {/* Video container - takes remaining space minus controls */}
+      {/* Video container */}
       <div className="flex-1 relative">
         <video
           ref={videoRef}
@@ -154,9 +164,9 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
           autoPlay
         />
 
-        {/* Loading overlay - only show when initializing */}
+        {/* Loading overlay */}
         {isInitializing && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80">
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 z-10">
             <div className="text-center">
               <Camera className="w-16 h-16 text-gray-400 mx-auto mb-4 animate-pulse" />
               <p className="text-gray-400 text-lg">Initializing camera...</p>
@@ -165,13 +175,32 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
         )}
       </div>
 
-      {/* Fixed controls at bottom - ALWAYS show unless captured image is displayed */}
-      {!isInitializing && (
-        <div className="flex-shrink-0 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
+      {/* Camera controls - Always visible when not showing captured image */}
+      <div className="flex-shrink-0 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
+        {error ? (
+          // Error state - show retry button
+          <div className="text-center">
+            <button
+              onClick={retryCamera}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-full font-medium transition-colors touch-manipulation text-lg"
+            >
+              Retry Camera
+            </button>
+          </div>
+        ) : isInitializing ? (
+          // Initializing state - show loading message
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 text-white">
+              <Camera className="w-5 h-5 animate-pulse flex-shrink-0" />
+              <span className="text-sm">Setting up camera...</span>
+            </div>
+          </div>
+        ) : (
+          // Active state - show camera controls
           <div className="flex items-center justify-center gap-8">
             <button
               onClick={toggleCamera}
-              disabled={isInitializing}
+              disabled={isInitializing || !isActive}
               className="p-4 bg-white/20 rounded-full backdrop-blur-sm hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
             >
               <RotateCcw className="w-6 h-6 text-white" />
@@ -179,48 +208,17 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
 
             <button
               onClick={handleCapture}
-              disabled={!isActive}
+              disabled={!isActive || isInitializing}
               className="p-6 bg-white rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg touch-manipulation min-w-[80px] min-h-[80px] flex items-center justify-center"
             >
               <Square className="w-8 h-8 text-gray-800" />
             </button>
 
-            {/* Retry button when there's an error */}
-            {error ? (
-              <button
-                onClick={() => startCamera(facingMode)}
-                className="p-4 bg-blue-500/80 rounded-full backdrop-blur-sm hover:bg-blue-600/80 transition-colors touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
-              >
-                <Camera className="w-6 h-6 text-white" />
-              </button>
-            ) : (
-              /* Spacer to balance the layout */
-              <div className="w-[64px]" />
-            )}
+            {/* Spacer for symmetry */}
+            <div className="w-[64px]" />
           </div>
-        </div>
-      )}
-
-      {/* Show start button when initializing or when there's an error */}
-      {(isInitializing || error) && (
-        <div className="flex-shrink-0 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
-          <div className="text-center">
-            {isInitializing ? (
-              <div className="flex items-center justify-center gap-2 text-white">
-                <Camera className="w-5 h-5 animate-pulse flex-shrink-0" />
-                <span className="text-sm">Setting up camera...</span>
-              </div>
-            ) : error ? (
-              <button
-                onClick={() => startCamera(facingMode)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-full font-medium transition-colors touch-manipulation text-lg"
-              >
-                Retry Camera
-              </button>
-            ) : null}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
