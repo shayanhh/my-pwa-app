@@ -48,20 +48,19 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
     }
   };
 
-  const handleRetake = () => {
+  const handleRetake = async () => {
     setCapturedImage(null);
-    // Restart camera if it's not active
-    if (!isActive && !isInitializing) {
-      startCamera(facingMode);
-    }
+    // Always restart the camera when taking another photo
+    await startCamera(facingMode);
   };
 
   const toggleCamera = async () => {
     const newFacingMode = facingMode === "user" ? "environment" : "user";
     setFacingMode(newFacingMode);
     stopCamera();
-    // Add a small delay to ensure camera is properly stopped
-    setTimeout(() => startCamera(newFacingMode), 300);
+    // Add a delay to ensure camera is properly stopped before starting new one
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await startCamera(newFacingMode);
   };
 
   const retryCamera = () => {

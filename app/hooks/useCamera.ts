@@ -35,10 +35,15 @@ export const useCamera = () => {
           throw new Error("Video element not available");
         }
 
-        // Stop any existing stream
+        // Stop any existing stream first
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
+        }
+
+        // Clear video source
+        if (videoRef.current.srcObject) {
+          videoRef.current.srcObject = null;
         }
 
         const constraints: MediaStreamConstraints = {
@@ -52,35 +57,56 @@ export const useCamera = () => {
 
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
-        videoRef.current.srcObject = stream;
 
-        // Wait for video to be ready
-        await new Promise<void>((resolve, reject) => {
-          if (videoRef.current) {
-            const video = videoRef.current;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+
+          // Wait for video to be ready
+          await new Promise<void>((resolve, reject) => {
+            const video = videoRef.current!;
 
             const handleCanPlay = () => {
               video.removeEventListener("canplay", handleCanPlay);
               video.removeEventListener("error", handleError);
+              video.removeEventListener("loadedmetadata", handleLoadedMetadata);
 
               video
                 .play()
-                .then(() => resolve())
+                .then(() => {
+                  // Double-check that video is actually playing
+                  if (video.videoWidth > 0 && video.videoHeight > 0) {
+                    resolve();
+                  } else {
+                    reject(new Error("Video dimensions not available"));
+                  }
+                })
                 .catch(reject);
+            };
+
+            const handleLoadedMetadata = () => {
+              if (video.readyState >= 2) {
+                // HAVE_CURRENT_DATA
+                handleCanPlay();
+              }
             };
 
             const handleError = () => {
               video.removeEventListener("canplay", handleCanPlay);
               video.removeEventListener("error", handleError);
+              video.removeEventListener("loadedmetadata", handleLoadedMetadata);
               reject(new Error("Video failed to load"));
             };
 
             video.addEventListener("canplay", handleCanPlay);
+            video.addEventListener("loadedmetadata", handleLoadedMetadata);
             video.addEventListener("error", handleError);
-          } else {
-            reject(new Error("Video element not available"));
-          }
-        });
+
+            // Trigger play immediately if video is already ready
+            if (video.readyState >= 2) {
+              handleCanPlay();
+            }
+          });
+        }
 
         setIsActive(true);
         setIsInitializing(false);
@@ -104,6 +130,7 @@ export const useCamera = () => {
 
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+      videoRef.current.pause();
     }
 
     setIsActive(false);
