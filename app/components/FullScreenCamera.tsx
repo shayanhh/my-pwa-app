@@ -129,10 +129,10 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
 
   // Camera screen
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 p-4 bg-gradient-to-b from-black/60 to-transparent relative z-20">
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 bg-black z-50 flex flex-col min-h-screen">
+      {/* Header - Fixed height */}
+      <div className="flex-shrink-0 h-16 p-4 bg-gradient-to-b from-black/60 to-transparent relative z-20 flex items-center">
+        <div className="flex items-center justify-between w-full">
           <button
             onClick={onBack}
             className="p-2 bg-black/40 rounded-full backdrop-blur-sm hover:bg-black/60 transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -154,8 +154,11 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
         </div>
       )}
 
-      {/* Video container */}
-      <div className="flex-1 relative">
+      {/* Video container - Constrained height to leave space for controls */}
+      <div
+        className="relative flex-1 min-h-0"
+        style={{ maxHeight: "calc(100vh - 200px)" }}
+      >
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
@@ -175,29 +178,25 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
         )}
       </div>
 
-      {/* Camera controls - Always visible when not showing captured image */}
-      <div className="flex-shrink-0 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
+      {/* Camera controls - Fixed at bottom with guaranteed space */}
+      <div className="flex-shrink-0 h-32 p-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20 flex items-center justify-center">
         {error ? (
           // Error state - show retry button
-          <div className="text-center">
-            <button
-              onClick={retryCamera}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-full font-medium transition-colors touch-manipulation text-lg"
-            >
-              Retry Camera
-            </button>
-          </div>
+          <button
+            onClick={retryCamera}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-full font-medium transition-colors touch-manipulation text-lg"
+          >
+            Retry Camera
+          </button>
         ) : isInitializing ? (
           // Initializing state - show loading message
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 text-white">
-              <Camera className="w-5 h-5 animate-pulse flex-shrink-0" />
-              <span className="text-sm">Setting up camera...</span>
-            </div>
+          <div className="flex items-center justify-center gap-2 text-white">
+            <Camera className="w-5 h-5 animate-pulse flex-shrink-0" />
+            <span className="text-sm">Setting up camera...</span>
           </div>
         ) : (
           // Active state - show camera controls
-          <div className="flex items-center justify-center gap-8">
+          <div className="flex items-center justify-center gap-8 w-full">
             <button
               onClick={toggleCamera}
               disabled={isInitializing || !isActive}
