@@ -91,6 +91,20 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
     }
   };
 
+  const handleScanAgain = async () => {
+    try {
+      clearResult();
+      // Stop current scanning first
+      stopScanning();
+      // Add a small delay to ensure proper cleanup
+      setTimeout(async () => {
+        await startScanning();
+      }, 300);
+    } catch (err) {
+      console.error("Failed to restart scanning:", err);
+    }
+  };
+
   if (result) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex flex-col">
@@ -144,10 +158,7 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
               )}
 
               <button
-                onClick={() => {
-                  clearResult();
-                  startScanning();
-                }}
+                onClick={handleScanAgain}
                 className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-xl font-medium transition-colors touch-manipulation min-h-[48px]"
               >
                 <QrCode className="w-5 h-5 flex-shrink-0" />
@@ -269,13 +280,14 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
             </button>
           </div>
         ) : (
-          <div className="text-center">
+          <div className="text-center space-y-4">
             <button
               onClick={startScanning}
               className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-full font-medium transition-colors touch-manipulation text-lg"
             >
               Start Scanning
             </button>
+            {error && <p className="text-red-400 text-sm">{error}</p>}
           </div>
         )}
       </div>

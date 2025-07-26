@@ -19,6 +19,7 @@ export const useCamera = () => {
       try {
         setError(null);
         setIsInitializing(true);
+        setIsActive(false); // Reset active state during initialization
 
         if (typeof window === "undefined") {
           throw new Error(
@@ -34,8 +35,10 @@ export const useCamera = () => {
           throw new Error("Video element not available");
         }
 
+        // Stop any existing stream
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
         }
 
         const constraints: MediaStreamConstraints = {
@@ -51,9 +54,24 @@ export const useCamera = () => {
         streamRef.current = stream;
         videoRef.current.srcObject = stream;
 
-        await new Promise<void>((resolve) => {
+        // Wait for video to be ready
+        await new Promise<void>((resolve, reject) => {
           if (videoRef.current) {
-            videoRef.current.onloadedmetadata = () => resolve();
+            const handleLoadedMetadata = () => {
+              // Ensure video is actually playing
+              videoRef.current
+                ?.play()
+                .then(() => {
+                  resolve();
+                })
+                .catch(reject);
+            };
+
+            videoRef.current.onloadedmetadata = handleLoadedMetadata;
+            videoRef.current.onerror = () =>
+              reject(new Error("Video loading failed"));
+          } else {
+            reject(new Error("Video element not available"));
           }
         });
 

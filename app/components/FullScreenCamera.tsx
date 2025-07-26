@@ -48,12 +48,15 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
     }
   };
 
-  const toggleCamera = () => {
+  const toggleCamera = async () => {
     const newFacingMode = facingMode === "user" ? "environment" : "user";
     setFacingMode(newFacingMode);
-    if (isActive) {
+    if (isActive || isInitializing) {
       stopCamera();
-      setTimeout(() => startCamera(newFacingMode), 100);
+      // Add a small delay to ensure camera is properly stopped
+      setTimeout(() => startCamera(newFacingMode), 200);
+    } else {
+      startCamera(newFacingMode);
     }
   };
 
@@ -162,12 +165,12 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
         )}
       </div>
 
-      {/* Fixed controls at bottom - ALWAYS show when camera is ready */}
+      {/* Fixed controls at bottom - Show when camera is ready OR when there's an error */}
       <div className="flex-shrink-0 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
         <div className="flex items-center justify-center gap-8">
           <button
             onClick={toggleCamera}
-            disabled={!isActive || isInitializing}
+            disabled={isInitializing}
             className="p-4 bg-white/20 rounded-full backdrop-blur-sm hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
           >
             <RotateCcw className="w-6 h-6 text-white" />
@@ -181,8 +184,18 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
             <Square className="w-8 h-8 text-gray-800" />
           </button>
 
-          {/* Spacer to balance the layout */}
-          <div className="w-[64px]" />
+          {/* Retry button when there's an error */}
+          {error && !isInitializing ? (
+            <button
+              onClick={() => startCamera(facingMode)}
+              className="p-4 bg-blue-500/80 rounded-full backdrop-blur-sm hover:bg-blue-600/80 transition-colors touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
+            >
+              <Camera className="w-6 h-6 text-white" />
+            </button>
+          ) : (
+            /* Spacer to balance the layout */
+            <div className="w-[64px]" />
+          )}
         </div>
       </div>
     </div>

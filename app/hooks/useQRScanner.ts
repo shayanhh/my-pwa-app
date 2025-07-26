@@ -36,7 +36,11 @@ export const useQRScanner = (): UseQRScannerReturn => {
 
     return () => {
       if (codeReader.current) {
-        codeReader.current.reset();
+        try {
+          codeReader.current.reset();
+        } catch (err) {
+          console.warn("Error resetting code reader on cleanup:", err);
+        }
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
@@ -47,7 +51,7 @@ export const useQRScanner = (): UseQRScannerReturn => {
   const startScanning = useCallback(async () => {
     try {
       setError(null);
-      setResult(null);
+      setIsScanning(false); // Reset scanning state first
 
       // Check environment support first
       if (typeof window === "undefined") {
@@ -76,6 +80,14 @@ export const useQRScanner = (): UseQRScannerReturn => {
         codeReader.current.reset();
       } catch (err) {
         console.warn("Error resetting code reader:", err);
+        // If reset fails, create a new instance
+        codeReader.current = new BrowserMultiFormatReader();
+      }
+
+      // Stop any existing stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
 
       // Check if we're on HTTPS or localhost
@@ -104,7 +116,17 @@ export const useQRScanner = (): UseQRScannerReturn => {
       // Wait for video to be ready
       await new Promise<void>((resolve, reject) => {
         if (videoRef.current) {
-          videoRef.current.onloadedmetadata = () => resolve();
+          const handleLoadedMetadata = () => {
+            // Ensure video is playing
+            videoRef.current
+              ?.play()
+              .then(() => {
+                resolve();
+              })
+              .catch(reject);
+          };
+
+          videoRef.current.onloadedmetadata = handleLoadedMetadata;
           videoRef.current.onerror = () =>
             reject(new Error("Video loading failed"));
         } else {
@@ -145,7 +167,7 @@ export const useQRScanner = (): UseQRScannerReturn => {
   }, [initializeCodeReader]);
 
   const stopScanning = useCallback(() => {
-    // Only reset the scanner, don't destroy the code reader
+    // Reset the scanner
     if (codeReader.current) {
       try {
         codeReader.current.reset();
