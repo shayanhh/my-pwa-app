@@ -165,39 +165,62 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
         )}
       </div>
 
-      {/* Fixed controls at bottom - Show when camera is ready OR when there's an error */}
-      <div className="flex-shrink-0 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
-        <div className="flex items-center justify-center gap-8">
-          <button
-            onClick={toggleCamera}
-            disabled={isInitializing}
-            className="p-4 bg-white/20 rounded-full backdrop-blur-sm hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
-          >
-            <RotateCcw className="w-6 h-6 text-white" />
-          </button>
-
-          <button
-            onClick={handleCapture}
-            disabled={!isActive || isInitializing}
-            className="p-6 bg-white rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg touch-manipulation min-w-[80px] min-h-[80px] flex items-center justify-center"
-          >
-            <Square className="w-8 h-8 text-gray-800" />
-          </button>
-
-          {/* Retry button when there's an error */}
-          {error && !isInitializing ? (
+      {/* Fixed controls at bottom - ALWAYS show unless captured image is displayed */}
+      {!isInitializing && (
+        <div className="flex-shrink-0 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
+          <div className="flex items-center justify-center gap-8">
             <button
-              onClick={() => startCamera(facingMode)}
-              className="p-4 bg-blue-500/80 rounded-full backdrop-blur-sm hover:bg-blue-600/80 transition-colors touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
+              onClick={toggleCamera}
+              disabled={isInitializing}
+              className="p-4 bg-white/20 rounded-full backdrop-blur-sm hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
             >
-              <Camera className="w-6 h-6 text-white" />
+              <RotateCcw className="w-6 h-6 text-white" />
             </button>
-          ) : (
-            /* Spacer to balance the layout */
-            <div className="w-[64px]" />
-          )}
+
+            <button
+              onClick={handleCapture}
+              disabled={!isActive}
+              className="p-6 bg-white rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg touch-manipulation min-w-[80px] min-h-[80px] flex items-center justify-center"
+            >
+              <Square className="w-8 h-8 text-gray-800" />
+            </button>
+
+            {/* Retry button when there's an error */}
+            {error ? (
+              <button
+                onClick={() => startCamera(facingMode)}
+                className="p-4 bg-blue-500/80 rounded-full backdrop-blur-sm hover:bg-blue-600/80 transition-colors touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
+              >
+                <Camera className="w-6 h-6 text-white" />
+              </button>
+            ) : (
+              /* Spacer to balance the layout */
+              <div className="w-[64px]" />
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Show start button when initializing or when there's an error */}
+      {(isInitializing || error) && (
+        <div className="flex-shrink-0 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
+          <div className="text-center">
+            {isInitializing ? (
+              <div className="flex items-center justify-center gap-2 text-white">
+                <Camera className="w-5 h-5 animate-pulse flex-shrink-0" />
+                <span className="text-sm">Setting up camera...</span>
+              </div>
+            ) : error ? (
+              <button
+                onClick={() => startCamera(facingMode)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-full font-medium transition-colors touch-manipulation text-lg"
+              >
+                Retry Camera
+              </button>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
