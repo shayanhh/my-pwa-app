@@ -1,22 +1,12 @@
 import { useRef, useCallback, useState, useEffect } from "react";
 
-interface UseCameraReturn {
-  videoRef: React.RefObject<HTMLVideoElement | null>;
-  isActive: boolean;
-  error: string | null;
-  startCamera: (facingMode?: "user" | "environment") => Promise<void>;
-  stopCamera: () => void;
-  capturePhoto: () => string | null;
-}
-
-export const useCamera = (): UseCameraReturn => {
+export const useCamera = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Create canvas element if it doesn't exist
   useEffect(() => {
     if (!canvasRef.current) {
       canvasRef.current = document.createElement("canvas");
@@ -28,7 +18,6 @@ export const useCamera = (): UseCameraReturn => {
       try {
         setError(null);
 
-        // Check environment support first
         if (typeof window === "undefined") {
           throw new Error(
             "Camera access is only available in browser environment"
@@ -43,17 +32,6 @@ export const useCamera = (): UseCameraReturn => {
           throw new Error("Video element not available");
         }
 
-        // Check if we're on HTTPS or localhost
-        if (
-          typeof location !== "undefined" &&
-          location.protocol !== "https:" &&
-          location.hostname !== "localhost" &&
-          location.hostname !== "127.0.0.1"
-        ) {
-          throw new Error("Camera access requires HTTPS connection");
-        }
-
-        // Stop existing stream if any
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
         }
@@ -61,8 +39,8 @@ export const useCamera = (): UseCameraReturn => {
         const constraints: MediaStreamConstraints = {
           video: {
             facingMode,
-            width: { ideal: 1280, max: 1920 },
-            height: { ideal: 720, max: 1080 },
+            width: { ideal: 1920, max: 3840 },
+            height: { ideal: 1080, max: 2160 },
           },
           audio: false,
         };
@@ -71,7 +49,6 @@ export const useCamera = (): UseCameraReturn => {
         streamRef.current = stream;
         videoRef.current.srcObject = stream;
 
-        // Wait for video to be ready
         await new Promise<void>((resolve) => {
           if (videoRef.current) {
             videoRef.current.onloadedmetadata = () => resolve();
@@ -119,14 +96,11 @@ export const useCamera = (): UseCameraReturn => {
       return null;
     }
 
-    // Set canvas dimensions to match video
     canvas.width = video.videoWidth || video.clientWidth;
     canvas.height = video.videoHeight || video.clientHeight;
 
-    // Draw the video frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert to base64 image
     try {
       return canvas.toDataURL("image/jpeg", 0.8);
     } catch (err) {
@@ -136,7 +110,6 @@ export const useCamera = (): UseCameraReturn => {
     }
   }, [isActive]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (streamRef.current) {
