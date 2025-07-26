@@ -2,8 +2,8 @@
 
 import { Camera, QrCode } from "lucide-react";
 import { useState } from "react";
-import { FullScreenCamera } from "./components/Camera";
-import { FullScreenQRScanner } from "./components/QRScanner";
+import { FullScreenCamera } from "./components/FullScreenCamera";
+import { FullScreenQRScanner } from "./components/FullScreenQRScanner";
 
 export default function Home() {
   const [activeView, setActiveView] = useState<"menu" | "camera" | "qr">(

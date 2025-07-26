@@ -1,19 +1,18 @@
-import { useEffect } from "react";
-import { useQRScanner } from "../hooks/useQRScanner";
+import React from "react";
 import {
-  AlertCircle,
-  ArrowLeft,
-  CheckCircle,
+  ScanQrCode,
+  Square,
   Copy,
   ExternalLink,
-  Loader2,
-  QrCode,
   X,
+  Play,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
+import { useQRScannerOld } from "../hooks/useQRScannerOld";
 
-export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
-  onBack,
-}) => {
+const QRScanner: React.FC = () => {
   const {
     videoRef,
     isScanning,
@@ -22,32 +21,16 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
     startScanning,
     stopScanning,
     clearResult,
-  } = useQRScanner();
-
-  useEffect(() => {
-    startScanning();
-    return () => stopScanning();
-  }, [startScanning, stopScanning]);
+  } = useQRScannerOld();
 
   const copyToClipboard = async () => {
     if (result) {
       try {
         await navigator.clipboard.writeText(result);
-        // Better user feedback
-        const button = document.activeElement as HTMLButtonElement;
-        if (button) {
-          const originalText = button.innerHTML;
-          button.innerHTML =
-            '<span class="flex items-center justify-center gap-2"><svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Copied!</span></span>';
-          setTimeout(() => {
-            if (button.innerHTML.includes("Copied!")) {
-              button.innerHTML = originalText;
-            }
-          }, 2000);
-        }
+        // TODO: add a toast notification here instead of alert
+        alert("Copied to clipboard!");
       } catch (err) {
         console.error("Failed to copy:", err);
-        alert("Failed to copy to clipboard");
       }
     }
   };
@@ -59,7 +42,6 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
         window.open(url, "_blank");
       } catch (err) {
         console.error("Invalid URL:", err);
-        alert("Invalid URL format");
       }
     }
   };
@@ -72,189 +54,164 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
           text.includes("www.") ||
           text.includes(".com") ||
           text.includes(".org") ||
-          text.includes(".net") ||
-          text.includes(".io") ||
-          text.includes(".co"))
+          text.includes(".net"))
       );
     } catch {
       return false;
     }
   };
 
-  if (result) {
-    return (
-      <div className="fixed inset-0 bg-black z-50 flex flex-col">
-        <div className="p-4 bg-gradient-to-b from-black/60 to-transparent">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={onBack}
-              className="p-2 bg-black/40 rounded-full backdrop-blur-sm hover:bg-black/60 transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
-            >
-              <ArrowLeft className="w-6 h-6 text-white" />
-            </button>
-            <h1 className="text-white font-semibold">QR Code Result</h1>
-            <div className="w-[44px]" />
+  return (
+    <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+      <div className="px-6 py-4 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-emerald-100 rounded-lg">
+            <ScanQrCode className="w-5 h-5 text-emerald-600" />
           </div>
+          <h2 className="text-xl font-semibold text-gray-800">
+            QR Code Scanner
+          </h2>
         </div>
+      </div>
 
-        <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
-          <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+      <div className="p-6 space-y-6">
+        {error && (
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
+            <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+            <p className="text-sm font-medium">{error}</p>
+          </div>
+        )}
+
+        {result && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
               <h3 className="font-semibold text-green-800">
                 Scanned Successfully!
               </h3>
             </div>
 
-            <div className="bg-gray-100 p-3 sm:p-4 rounded-xl max-h-32 overflow-y-auto">
-              <p className="text-xs sm:text-sm text-gray-700 break-all font-mono">
+            <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm">
+              <p className="text-sm text-gray-700 break-all font-mono leading-relaxed">
                 {result}
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex gap-2">
               <button
                 onClick={copyToClipboard}
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-xl font-medium transition-colors touch-manipulation min-h-[48px]"
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
               >
-                <Copy className="w-4 h-4 flex-shrink-0" />
-                <span>Copy</span>
+                <Copy className="w-4 h-4" />
+                Copy
               </button>
               {isUrl(result) && (
                 <button
                   onClick={openLink}
-                  className="flex-1 flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-xl font-medium transition-colors touch-manipulation min-h-[48px]"
+                  className="flex-1 flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
                 >
-                  <ExternalLink className="w-4 h-4 flex-shrink-0" />
-                  <span>Open</span>
+                  <ExternalLink className="w-4 h-4" />
+                  Open
                 </button>
               )}
+              <button
+                onClick={clearResult}
+                className="flex items-center justify-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
+          </div>
+        )}
 
+        <div className="relative">
+          <div
+            className="relative bg-gray-900 rounded-2xl overflow-hidden shadow-inner"
+            style={{ aspectRatio: "16/9" }}
+          >
+            <video
+              ref={videoRef}
+              className="w-full h-full object-cover"
+              playsInline
+              muted
+              autoPlay
+            />
+
+            {!isScanning && !result && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 bg-opacity-90">
+                <div className="p-4 bg-gray-700 rounded-full mb-4">
+                  <ScanQrCode className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="text-gray-300 text-sm font-medium text-center px-4">
+                  Point camera at QR code to scan
+                </p>
+              </div>
+            )}
+
+            {isScanning && (
+              <div className="absolute inset-0">
+                <div className="absolute top-4 left-4 right-4 flex justify-center z-10">
+                  <div className="flex items-center gap-2 bg-black bg-opacity-70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Scanning for QR codes...
+                  </div>
+                </div>
+
+                {/* Scanner Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="relative">
+                    <div className="w-56 h-56 border-2 border-emerald-400 relative rounded-2xl">
+                      <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg"></div>
+                      <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg"></div>
+                      <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg"></div>
+                      <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-lg"></div>
+
+                      {/* Animated scanning line */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Overlay gradient */}
+                <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          {!isScanning && !result ? (
+            <button
+              onClick={startScanning}
+              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <Play className="w-5 h-5" />
+              Start Scanning
+            </button>
+          ) : isScanning ? (
+            <button
+              onClick={stopScanning}
+              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <Square className="w-5 h-5" />
+              Stop Scanning
+            </button>
+          ) : (
             <button
               onClick={() => {
                 clearResult();
                 startScanning();
               }}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-xl font-medium transition-colors touch-manipulation min-h-[48px]"
+              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              <QrCode className="w-5 h-5 flex-shrink-0" />
-              <span>Scan Again</span>
+              <ScanQrCode className="w-5 h-5" />
+              Scan Again
             </button>
-          </div>
+          )}
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/60 to-transparent">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onBack}
-            className="p-2 bg-black/40 rounded-full backdrop-blur-sm hover:bg-black/60 transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
-          >
-            <ArrowLeft className="w-6 h-6 text-white" />
-          </button>
-          <h1 className="text-white font-semibold">QR Scanner</h1>
-          <div className="w-[44px]" />
-        </div>
-      </div>
-
-      {/* Error message */}
-      {error && (
-        <div className="absolute top-16 left-4 right-4 z-10">
-          <div className="flex items-center gap-2 bg-red-500/90 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <p className="text-sm">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Video */}
-      <div className="flex-1 relative">
-        <video
-          ref={videoRef}
-          className="w-full h-full object-cover"
-          playsInline
-          muted
-          autoPlay
-        />
-
-        {/* Scanner overlay */}
-        {isScanning && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            {/* Dark overlay with cutout effect */}
-            <div className="absolute inset-0">
-              <div className="absolute inset-0 bg-black bg-opacity-50"></div>
-              {/* Cutout for scanner area */}
-              <div
-                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-56 h-56 sm:w-64 sm:h-64"
-                style={{
-                  boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.5)",
-                }}
-              ></div>
-            </div>
-
-            {/* Scanner frame */}
-            <div className="relative z-10">
-              <div className="w-56 h-56 sm:w-64 sm:h-64 border-2 border-emerald-400 relative rounded-2xl bg-transparent">
-                {/* Corner indicators */}
-                <div className="absolute -top-1 -left-1 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg"></div>
-                <div className="absolute -top-1 -right-1 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg"></div>
-                <div className="absolute -bottom-1 -left-1 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg"></div>
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-lg"></div>
-
-                {/* Scanning line animation */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse"></div>
-
-                {/* Additional scanning effect */}
-                <div className="absolute inset-2 border border-emerald-300 rounded-xl opacity-30 animate-pulse"></div>
-              </div>
-
-              {/* Instruction text */}
-              <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 text-center">
-                <p className="text-white text-sm bg-black/50 px-4 py-2 rounded-full backdrop-blur-sm">
-                  Position QR code within the frame
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!isScanning && !result && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80">
-            <div className="text-center">
-              <QrCode className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-400">Initializing scanner...</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Status indicator */}
-      {isScanning && (
-        <div className="absolute bottom-8 sm:bottom-20 left-0 right-0 flex justify-center px-4">
-          <div className="flex items-center gap-2 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full">
-            <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
-            <span className="text-sm">Scanning for QR codes...</span>
-          </div>
-        </div>
-      )}
-
-      {/* Manual stop button (optional) */}
-      {isScanning && (
-        <div className="absolute bottom-20 sm:bottom-32 right-4">
-          <button
-            onClick={stopScanning}
-            className="bg-red-500/80 hover:bg-red-600/80 text-white p-3 rounded-full backdrop-blur-sm transition-colors touch-manipulation"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      )}
     </div>
   );
 };
+
+export default QRScanner;

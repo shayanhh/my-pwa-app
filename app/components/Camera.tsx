@@ -1,29 +1,22 @@
-import { useEffect, useState } from "react";
-import { useCamera } from "../hooks/useCamera";
+import React, { useState } from "react";
 import {
-  AlertCircle,
-  ArrowLeft,
-  Camera,
-  Download,
-  RotateCcw,
+  Camera as CameraIcon,
   Square,
+  RotateCcw,
+  Download,
   X,
+  Play,
+  AlertCircle,
 } from "lucide-react";
+import { useCameraOld } from "../hooks/useCameraOld";
 
-export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
-  onBack,
-}) => {
+const Camera: React.FC = () => {
   const { videoRef, isActive, error, startCamera, stopCamera, capturePhoto } =
-    useCamera();
+    useCameraOld();
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"user" | "environment">(
     "environment"
   );
-
-  useEffect(() => {
-    startCamera(facingMode);
-    return () => stopCamera();
-  }, []);
 
   const handleCapture = () => {
     const photo = capturePhoto();
@@ -42,123 +35,137 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
   };
 
   const toggleCamera = () => {
-    const newFacingMode = facingMode === "user" ? "environment" : "user";
-    setFacingMode(newFacingMode);
+    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
     if (isActive) {
       stopCamera();
-      setTimeout(() => startCamera(newFacingMode), 100);
+      setTimeout(
+        () => startCamera(facingMode === "user" ? "environment" : "user"),
+        100
+      );
     }
   };
 
-  if (capturedImage) {
-    return (
-      <div className="fixed inset-0 bg-black z-50 flex flex-col">
-        <div className="flex-1 flex items-center justify-center p-4">
-          <img
-            src={capturedImage}
-            alt="Captured"
-            className="max-w-full max-h-full object-contain"
-          />
-        </div>
-
-        {/* Mobile-responsive button container */}
-        <div className="p-4 sm:p-6 bg-black bg-opacity-80 backdrop-blur-sm">
-          {/* Stack buttons vertically on very small screens, horizontally on larger screens */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-md mx-auto">
-            <button
-              onClick={handleDownload}
-              className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-full font-medium transition-colors text-sm sm:text-base min-h-[48px] touch-manipulation"
-            >
-              <Download className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-              <span>Download</span>
-            </button>
-            <button
-              onClick={() => setCapturedImage(null)}
-              className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-full font-medium transition-colors text-sm sm:text-base min-h-[48px] touch-manipulation"
-            >
-              <Camera className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-              <span>Take Another</span>
-            </button>
-            <button
-              onClick={onBack}
-              className="flex items-center justify-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-full font-medium transition-colors text-sm sm:text-base min-h-[48px] touch-manipulation"
-            >
-              <X className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-              <span>Close</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/60 to-transparent">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onBack}
-            className="p-2 bg-black/40 rounded-full backdrop-blur-sm hover:bg-black/60 transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
-          >
-            <ArrowLeft className="w-6 h-6 text-white" />
-          </button>
-          <h1 className="text-white font-semibold text-lg">Camera</h1>
-          <div className="w-[44px]" />
+    <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <CameraIcon className="w-5 h-5 text-blue-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-800">Camera</h2>
         </div>
       </div>
 
-      {/* Error message */}
-      {error && (
-        <div className="absolute top-16 left-4 right-4 z-10">
-          <div className="flex items-center gap-2 bg-red-500/90 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <p className="text-sm">{error}</p>
+      <div className="p-6 space-y-6">
+        {error && (
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
+            <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+            <p className="text-sm font-medium">{error}</p>
+          </div>
+        )}
+
+        <div className="relative">
+          <div
+            className="relative bg-gray-900 rounded-2xl overflow-hidden shadow-inner"
+            style={{ aspectRatio: "16/9" }}
+          >
+            <video
+              ref={videoRef}
+              className="w-full h-full object-cover"
+              playsInline
+              muted
+              autoPlay
+            />
+            {!isActive && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 bg-opacity-90">
+                <div className="p-4 bg-gray-700 rounded-full mb-3">
+                  <CameraIcon className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="text-gray-300 text-sm font-medium">
+                  Camera not active
+                </p>
+              </div>
+            )}
+
+            {isActive && (
+              <div className="absolute bottom-4 left-4 right-4 flex justify-center">
+                <div className="flex items-center gap-3 bg-black bg-opacity-60 backdrop-blur-sm rounded-full px-4 py-2">
+                  <button
+                    onClick={handleCapture}
+                    className="p-3 bg-white rounded-full hover:bg-gray-100 transition-colors shadow-lg"
+                  >
+                    <Square className="w-6 h-6 text-gray-800" />
+                  </button>
+                  <button
+                    onClick={toggleCamera}
+                    className="p-2 bg-white bg-opacity-20 rounded-full hover:bg-opacity-30 transition-colors"
+                  >
+                    <RotateCcw className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Video */}
-      <div className="flex-1 relative">
-        <video
-          ref={videoRef}
-          className="w-full h-full object-cover"
-          playsInline
-          muted
-          autoPlay
-        />
+        <div className="flex gap-3">
+          {!isActive ? (
+            <button
+              onClick={() => startCamera(facingMode)}
+              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <Play className="w-5 h-5" />
+              Start Camera
+            </button>
+          ) : (
+            <button
+              onClick={stopCamera}
+              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <Square className="w-5 h-5" />
+              Stop Camera
+            </button>
+          )}
+        </div>
 
-        {!isActive && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-            <div className="text-center">
-              <Camera className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-400">Initializing camera...</p>
+        {capturedImage && (
+          <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm font-medium text-gray-700">
+                Photo Captured
+              </span>
+            </div>
+
+            <div className="relative bg-black rounded-xl overflow-hidden shadow-lg">
+              <img
+                src={capturedImage}
+                alt="Captured"
+                className="w-full h-auto"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleDownload}
+                className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </button>
+              <button
+                onClick={() => setCapturedImage(null)}
+                className="flex-1 flex items-center justify-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                <X className="w-4 h-4" />
+                Clear
+              </button>
             </div>
           </div>
         )}
       </div>
-
-      {/* Controls - Mobile optimized */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/80 to-transparent">
-        <div className="flex items-center justify-center gap-6 sm:gap-8">
-          <button
-            onClick={toggleCamera}
-            className="p-3 sm:p-4 bg-white/20 rounded-full backdrop-blur-sm hover:bg-white/30 transition-colors touch-manipulation min-w-[56px] min-h-[56px] flex items-center justify-center"
-          >
-            <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          </button>
-
-          <button
-            onClick={handleCapture}
-            disabled={!isActive}
-            className="p-5 sm:p-6 bg-white rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 shadow-lg touch-manipulation min-w-[72px] min-h-[72px] flex items-center justify-center"
-          >
-            <Square className="w-6 h-6 sm:w-8 sm:h-8 text-gray-800" />
-          </button>
-
-          <div className="w-[56px]" />
-        </div>
-      </div>
     </div>
   );
 };
+
+export default Camera;
