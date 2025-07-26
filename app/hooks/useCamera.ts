@@ -7,15 +7,6 @@ interface UseCameraReturn {
   startCamera: (facingMode?: "user" | "environment") => Promise<void>;
   stopCamera: () => void;
   capturePhoto: () => string | null;
-  debugInfo: {
-    isSecureContext: boolean;
-    hasNavigator: boolean;
-    hasMediaDevices: boolean;
-    hasGetUserMedia: boolean;
-    userAgent: string;
-    protocol: string;
-    hostname: string;
-  };
 }
 
 export const useCamera = (): UseCameraReturn => {
@@ -24,37 +15,11 @@ export const useCamera = (): UseCameraReturn => {
   const streamRef = useRef<MediaStream | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState({
-    isSecureContext: false,
-    hasNavigator: false,
-    hasMediaDevices: false,
-    hasGetUserMedia: false,
-    userAgent: "",
-    protocol: "",
-    hostname: "",
-  });
 
   // Create canvas element if it doesn't exist
   useEffect(() => {
     if (!canvasRef.current) {
       canvasRef.current = document.createElement("canvas");
-    }
-
-    // Collect debug info
-    if (typeof window !== "undefined") {
-      setDebugInfo({
-        isSecureContext: window.isSecureContext || false,
-        hasNavigator: typeof navigator !== "undefined",
-        hasMediaDevices:
-          typeof navigator !== "undefined" && !!navigator.mediaDevices,
-        hasGetUserMedia:
-          typeof navigator !== "undefined" &&
-          !!navigator.mediaDevices &&
-          typeof navigator.mediaDevices.getUserMedia === "function",
-        userAgent: navigator?.userAgent || "Unknown",
-        protocol: window.location?.protocol || "Unknown",
-        hostname: window.location?.hostname || "Unknown",
-      });
     }
   }, []);
 
@@ -63,37 +28,29 @@ export const useCamera = (): UseCameraReturn => {
       try {
         setError(null);
 
-        // Enhanced environment checks with detailed error messages
+        // Check environment support first
         if (typeof window === "undefined") {
           throw new Error(
             "Camera access is only available in browser environment"
           );
         }
 
-        if (typeof navigator === "undefined") {
-          throw new Error("Navigator API is not available");
-        }
-
-        if (!navigator.mediaDevices) {
-          throw new Error(
-            "MediaDevices API is not available. This might be due to an insecure context (HTTP instead of HTTPS)"
-          );
-        }
-
-        if (typeof navigator.mediaDevices.getUserMedia !== "function") {
-          throw new Error("getUserMedia is not supported by this browser");
-        }
-
-        // Check secure context (HTTPS requirement)
-        if (!window.isSecureContext) {
-          throw new Error(
-            "Camera access requires a secure context (HTTPS). Current protocol: " +
-              window.location.protocol
-          );
+        if (!navigator?.mediaDevices?.getUserMedia) {
+          throw new Error("Camera access is not supported by this browser");
         }
 
         if (!videoRef.current) {
           throw new Error("Video element not available");
+        }
+
+        // Check if we're on HTTPS or localhost
+        if (
+          typeof location !== "undefined" &&
+          location.protocol !== "https:" &&
+          location.hostname !== "localhost" &&
+          location.hostname !== "127.0.0.1"
+        ) {
+          throw new Error("Camera access requires HTTPS connection");
         }
 
         // Stop existing stream if any
@@ -101,19 +58,11 @@ export const useCamera = (): UseCameraReturn => {
           streamRef.current.getTracks().forEach((track) => track.stop());
         }
 
-        console.log("Requesting camera with constraints:", {
-          video: {
-            facingMode,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        });
-
         const constraints: MediaStreamConstraints = {
           video: {
             facingMode,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
           },
           audio: false,
         };
@@ -123,71 +72,16 @@ export const useCamera = (): UseCameraReturn => {
         videoRef.current.srcObject = stream;
 
         // Wait for video to be ready
-        await new Promise<void>((resolve, reject) => {
+        await new Promise<void>((resolve) => {
           if (videoRef.current) {
-            videoRef.current.onloadedmetadata = () => {
-              console.log("Video metadata loaded successfully");
-              resolve();
-            };
-            videoRef.current.onerror = (err) => {
-              console.error("Video error:", err);
-              reject(new Error("Failed to load video stream"));
-            };
-            // Timeout after 10 seconds
-            setTimeout(() => reject(new Error("Video loading timeout")), 10000);
-          } else {
-            reject(new Error("Video element not available"));
+            videoRef.current.onloadedmetadata = () => resolve();
           }
         });
 
         setIsActive(true);
-        console.log("Camera started successfully");
       } catch (err) {
-        let errorMessage = "Failed to start camera";
-
-        if (err instanceof Error) {
-          errorMessage = err.message;
-        } else if (err && typeof err === "object" && "name" in err) {
-          const domError = err as DOMException;
-          switch (domError.name) {
-            case "NotAllowedError":
-              errorMessage =
-                "Camera access denied. Please allow camera permissions and try again.";
-              break;
-            case "NotFoundError":
-              errorMessage = "No camera found on this device.";
-              break;
-            case "NotReadableError":
-              errorMessage = "Camera is already in use by another application.";
-              break;
-            case "OverconstrainedError":
-              errorMessage =
-                "Camera constraints not supported. Trying basic settings...";
-              // Try again with basic constraints
-              try {
-                const basicStream = await navigator.mediaDevices.getUserMedia({
-                  video: true,
-                });
-                streamRef.current = basicStream;
-                if (videoRef.current) {
-                  videoRef.current.srcObject = basicStream;
-                  setIsActive(true);
-                  return;
-                }
-              } catch (basicErr) {
-                errorMessage =
-                  "Camera constraints not supported and basic camera access failed.";
-              }
-              break;
-            case "SecurityError":
-              errorMessage =
-                "Camera access blocked due to security restrictions. Ensure you're on HTTPS.";
-              break;
-            default:
-              errorMessage = `Camera error: ${domError.name} - ${domError.message}`;
-          }
-        }
-
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to start camera";
         setError(errorMessage);
         setIsActive(false);
         console.error("Camera error:", err);
@@ -258,6 +152,5 @@ export const useCamera = (): UseCameraReturn => {
     startCamera,
     stopCamera,
     capturePhoto,
-    debugInfo,
   };
 };
