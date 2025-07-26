@@ -86,8 +86,11 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
           </div>
         </div>
 
-        {/* Image container */}
-        <div className="flex-1 flex items-center justify-center p-4 pb-0">
+        {/* Image container - Constrained to leave space for buttons */}
+        <div
+          className="flex-1 flex items-center justify-center p-4"
+          style={{ maxHeight: "calc(100vh - 160px)" }}
+        >
           <img
             src={capturedImage}
             alt="Captured"
@@ -96,31 +99,29 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
         </div>
 
         {/* Action buttons */}
-        <div className="flex-shrink-0 p-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
-          <div className="flex flex-col gap-3 max-w-sm mx-auto">
+        <div className="flex-shrink-0 h-24 p-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent flex items-center justify-center">
+          <div className="flex gap-6 items-center justify-center">
+            <button
+              onClick={handleRetake}
+              className="p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors touch-manipulation min-w-[56px] min-h-[56px] flex items-center justify-center"
+              title="Take Another"
+            >
+              <Camera className="w-6 h-6" />
+            </button>
             <button
               onClick={handleDownload}
-              className="flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 text-white px-6 py-4 rounded-full font-medium transition-colors text-base min-h-[56px] touch-manipulation"
+              className="p-4 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors touch-manipulation min-w-[56px] min-h-[56px] flex items-center justify-center"
+              title="Download Photo"
             >
-              <Download className="w-5 h-5 flex-shrink-0" />
-              <span>Download Photo</span>
+              <Download className="w-6 h-6" />
             </button>
-            <div className="flex gap-3">
-              <button
-                onClick={handleRetake}
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-full font-medium transition-colors text-sm min-h-[48px] touch-manipulation"
-              >
-                <Camera className="w-4 h-4 flex-shrink-0" />
-                <span>Take Another</span>
-              </button>
-              <button
-                onClick={onBack}
-                className="flex-1 flex items-center justify-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-full font-medium transition-colors text-sm min-h-[48px] touch-manipulation"
-              >
-                <X className="w-4 h-4 flex-shrink-0" />
-                <span>Close</span>
-              </button>
-            </div>
+            <button
+              onClick={onBack}
+              className="p-4 bg-gray-500 hover:bg-gray-600 text-white rounded-full transition-colors touch-manipulation min-w-[56px] min-h-[56px] flex items-center justify-center"
+              title="Close"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
         </div>
       </div>
