@@ -144,6 +144,7 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
           autoPlay
         />
 
+        {/* Loading overlay - only show when camera is not active */}
         {!isActive && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
             <div className="text-center">
@@ -154,12 +155,13 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
         )}
       </div>
 
-      {/* Fixed controls at bottom */}
+      {/* Fixed controls at bottom - ALWAYS show when camera is ready */}
       <div className="flex-shrink-0 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
         <div className="flex items-center justify-center gap-8">
           <button
             onClick={toggleCamera}
-            className="p-4 bg-white/20 rounded-full backdrop-blur-sm hover:bg-white/30 transition-colors touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
+            disabled={!isActive}
+            className="p-4 bg-white/20 rounded-full backdrop-blur-sm hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-w-[64px] min-h-[64px] flex items-center justify-center"
           >
             <RotateCcw className="w-6 h-6 text-white" />
           </button>
@@ -167,11 +169,12 @@ export const FullScreenCamera: React.FC<{ onBack: () => void }> = ({
           <button
             onClick={handleCapture}
             disabled={!isActive}
-            className="p-6 bg-white rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 shadow-lg touch-manipulation min-w-[80px] min-h-[80px] flex items-center justify-center"
+            className="p-6 bg-white rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg touch-manipulation min-w-[80px] min-h-[80px] flex items-center justify-center"
           >
             <Square className="w-8 h-8 text-gray-800" />
           </button>
 
+          {/* Spacer to balance the layout */}
           <div className="w-[64px]" />
         </div>
       </div>

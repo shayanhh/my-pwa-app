@@ -19,15 +19,20 @@ export const useQRScanner = (): UseQRScannerReturn => {
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Initialize code reader only in browser environment
+  // Initialize code reader and keep it persistent
+  const initializeCodeReader = useCallback(() => {
     if (
+      !codeReader.current &&
       typeof window !== "undefined" &&
       navigator.mediaDevices &&
       typeof navigator.mediaDevices.getUserMedia === "function"
     ) {
       codeReader.current = new BrowserMultiFormatReader();
     }
+  }, []);
+
+  useEffect(() => {
+    initializeCodeReader();
 
     return () => {
       if (codeReader.current) {
@@ -37,7 +42,7 @@ export const useQRScanner = (): UseQRScannerReturn => {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [initializeCodeReader]);
 
   const startScanning = useCallback(async () => {
     try {
@@ -54,6 +59,11 @@ export const useQRScanner = (): UseQRScannerReturn => {
         typeof navigator.mediaDevices.getUserMedia !== "function"
       ) {
         throw new Error("Camera access is not supported by this browser");
+      }
+
+      // Reinitialize code reader if it's null
+      if (!codeReader.current) {
+        initializeCodeReader();
       }
 
       if (!codeReader.current || !videoRef.current) {
@@ -124,7 +134,7 @@ export const useQRScanner = (): UseQRScannerReturn => {
       setIsScanning(false);
       console.error("QR Scanner error:", err);
     }
-  }, []);
+  }, [initializeCodeReader]);
 
   const stopScanning = useCallback(() => {
     if (codeReader.current) {
