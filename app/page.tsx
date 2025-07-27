@@ -4,6 +4,7 @@ import { Camera, QrCode } from "lucide-react";
 import { useState } from "react";
 import { FullScreenCamera } from "./components/FullScreenCamera";
 import { FullScreenQRScanner } from "./components/FullScreenQRScanner";
+import { InstallPrompt } from "./components/InstallPrompt";
 
 export default function Home() {
   const [activeView, setActiveView] = useState<"menu" | "camera" | "qr">(
@@ -12,6 +13,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <InstallPrompt />
+
       {activeView === "menu" && (
         <div className="max-w-md mx-auto space-y-4 pt-20">
           <div className="text-center mb-8">
