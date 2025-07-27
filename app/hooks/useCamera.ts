@@ -85,7 +85,6 @@ export const useCamera = () => {
 
             const handleLoadedMetadata = () => {
               if (video.readyState >= 2) {
-                // HAVE_CURRENT_DATA
                 handleCanPlay();
               }
             };

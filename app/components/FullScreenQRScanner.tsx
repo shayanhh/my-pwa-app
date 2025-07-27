@@ -43,7 +43,6 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
     if (result) {
       try {
         await navigator.clipboard.writeText(result);
-        // Better user feedback
         const button = document.activeElement as HTMLButtonElement;
         if (button) {
           const originalText = button.innerHTML;
@@ -108,7 +107,6 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
   if (result) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex flex-col">
-        {/* Header */}
         <div className="flex-shrink-0 p-4 bg-gradient-to-b from-black/60 to-transparent">
           <div className="flex items-center justify-between">
             <button
@@ -122,7 +120,6 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
           </div>
         </div>
 
-        {/* Result container */}
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4">
             <div className="flex items-center gap-2 mb-4">
@@ -173,7 +170,6 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      {/* Header */}
       <div className="flex-shrink-0 p-4 bg-gradient-to-b from-black/60 to-transparent relative z-20">
         <div className="flex items-center justify-between">
           <button
@@ -187,7 +183,6 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
         </div>
       </div>
 
-      {/* Error message */}
       {error && (
         <div className="absolute top-20 left-4 right-4 z-30">
           <div className="flex items-center gap-2 bg-red-500/90 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
@@ -197,7 +192,6 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
         </div>
       )}
 
-      {/* Video container */}
       <div className="flex-1 relative">
         <video
           ref={videoRef}
@@ -224,7 +218,6 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
           onError={(e) => console.error("Video error:", e)}
         />
 
-        {/* Loading state */}
         {!isScanning && !result && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90">
             <div className="text-center">
@@ -234,10 +227,8 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
           </div>
         )}
 
-        {/* Scanner overlay - only show when actively scanning */}
         {isScanning && videoRef.current?.videoWidth && (
           <div className="absolute inset-0 flex items-center justify-center">
-            {/* Dark overlay */}
             <div className="absolute inset-0 bg-black/50" />
 
             {/* Scanner frame */}
@@ -252,19 +243,11 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
                 {/* Scanning line */}
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse" />
               </div>
-
-              {/* Instruction */}
-              <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 text-center">
-                <p className="text-white text-sm bg-black/70 px-4 py-2 rounded-full backdrop-blur-sm">
-                  Position QR code within the frame
-                </p>
-              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Status and controls */}
       <div className="flex-shrink-0 p-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
         {isScanning ? (
           <div className="text-center space-y-4">

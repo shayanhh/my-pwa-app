@@ -19,7 +19,6 @@ export const useQRScanner = (): UseQRScannerReturn => {
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize code reader and keep it persistent
   const initializeCodeReader = useCallback(() => {
     if (
       !codeReader.current &&
@@ -51,9 +50,8 @@ export const useQRScanner = (): UseQRScannerReturn => {
   const startScanning = useCallback(async () => {
     try {
       setError(null);
-      setIsScanning(false); // Reset scanning state first
+      setIsScanning(false);
 
-      // Check environment support first
       if (typeof window === "undefined") {
         throw new Error("QR Scanner is only available in browser environment");
       }
@@ -90,7 +88,6 @@ export const useQRScanner = (): UseQRScannerReturn => {
         streamRef.current = null;
       }
 
-      // Check if we're on HTTPS or localhost
       if (
         typeof location !== "undefined" &&
         location.protocol !== "https:" &&
@@ -117,7 +114,6 @@ export const useQRScanner = (): UseQRScannerReturn => {
       await new Promise<void>((resolve, reject) => {
         if (videoRef.current) {
           const handleLoadedMetadata = () => {
-            // Ensure video is playing
             videoRef.current
               ?.play()
               .then(() => {
@@ -143,8 +139,6 @@ export const useQRScanner = (): UseQRScannerReturn => {
         (result: Result | null, error: unknown | undefined) => {
           if (result) {
             setResult(result.getText());
-            // Don't automatically stop scanning in full-screen mode
-            // Let the user decide when to stop
           }
           if (
             error &&
@@ -167,7 +161,6 @@ export const useQRScanner = (): UseQRScannerReturn => {
   }, [initializeCodeReader]);
 
   const stopScanning = useCallback(() => {
-    // Reset the scanner
     if (codeReader.current) {
       try {
         codeReader.current.reset();
