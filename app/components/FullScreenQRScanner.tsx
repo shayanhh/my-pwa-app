@@ -227,25 +227,9 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
           </div>
         )}
 
-        {isScanning && videoRef.current?.videoWidth && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/50" />
-
-            {/* Scanner frame */}
-            <div className="relative z-10">
-              <div className="w-56 h-56 sm:w-64 sm:h-64 border-2 border-emerald-400 relative rounded-2xl">
-                {/* Corner indicators */}
-                <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg" />
-                <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg" />
-                <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg" />
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-lg" />
-
-                {/* Scanning line */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse" />
-              </div>
-            </div>
-          </div>
-        )}
+        {/* {isScanning && videoRef.current?.videoWidth && (
+          <div className="absolute inset-0 flex items-center justify-center"></div>
+        )} */}
       </div>
 
       <div className="flex-shrink-0 p-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">
