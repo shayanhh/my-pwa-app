@@ -226,10 +226,6 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
             </div>
           </div>
         )}
-
-        {/* {isScanning && videoRef.current?.videoWidth && (
-          <div className="absolute inset-0 flex items-center justify-center"></div>
-        )} */}
       </div>
 
       <div className="flex-shrink-0 p-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent relative z-20">

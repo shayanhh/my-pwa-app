@@ -1,10 +1,10 @@
 "use client";
 
-import { Camera, QrCode } from "lucide-react";
 import { useState } from "react";
+import { Camera, QrCode } from "lucide-react";
+import { InstallPrompt } from "./components/InstallPrompt";
 import { FullScreenCamera } from "./components/FullScreenCamera";
 import { FullScreenQRScanner } from "./components/FullScreenQRScanner";
-import { InstallPrompt } from "./components/InstallPrompt";
 
 export default function Home() {
   const [activeView, setActiveView] = useState<"menu" | "camera" | "qr">(
