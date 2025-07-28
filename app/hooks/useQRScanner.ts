@@ -1,22 +1,33 @@
 import { useRef, useCallback, useState, useEffect } from "react";
 import { BrowserMultiFormatReader, Result } from "@zxing/library";
 
+interface QRResult {
+  text: string;
+  timestamp: number;
+  id: string;
+}
+
 interface UseQRScannerReturn {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   isScanning: boolean;
-  result: string | null;
+  results: QRResult[];
   error: string | null;
   startScanning: () => Promise<void>;
   stopScanning: () => void;
-  clearResult: () => void;
+  clearResults: () => void;
+  selectResult: (result: QRResult) => void;
+  selectedResult: QRResult | null;
 }
 
 export const useQRScanner = (): UseQRScannerReturn => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const detectedCodes = useRef<Set<string>>(new Set());
+
   const [isScanning, setIsScanning] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [results, setResults] = useState<QRResult[]>([]);
+  const [selectedResult, setSelectedResult] = useState<QRResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const initializeCodeReader = useCallback(() => {
@@ -47,10 +58,37 @@ export const useQRScanner = (): UseQRScannerReturn => {
     };
   }, [initializeCodeReader]);
 
+  const addResult = useCallback((text: string) => {
+    // Avoid duplicates by checking if we've already detected this code recently
+    if (!detectedCodes.current.has(text)) {
+      detectedCodes.current.add(text);
+      const newResult: QRResult = {
+        text,
+        timestamp: Date.now(),
+        id: Math.random().toString(36).substr(2, 9),
+      };
+
+      setResults((prev) => {
+        // Keep only the most recent 5 results to avoid memory buildup
+        const updated = [newResult, ...prev].slice(0, 5);
+        return updated;
+      });
+
+      // Auto-select first result if none selected
+      setSelectedResult((prev) => prev || newResult);
+
+      // Remove from detected set after 3 seconds to allow re-detection
+      setTimeout(() => {
+        detectedCodes.current.delete(text);
+      }, 3000);
+    }
+  }, []);
+
   const startScanning = useCallback(async () => {
     try {
       setError(null);
       setIsScanning(false);
+      detectedCodes.current.clear();
 
       if (typeof window === "undefined") {
         throw new Error("QR Scanner is only available in browser environment");
@@ -63,9 +101,7 @@ export const useQRScanner = (): UseQRScannerReturn => {
         throw new Error("Camera access is not supported by this browser");
       }
 
-      // Always ensure we have a fresh code reader instance
       if (!codeReader.current) {
-        console.log("Initializing new code reader");
         initializeCodeReader();
       }
 
@@ -73,16 +109,13 @@ export const useQRScanner = (): UseQRScannerReturn => {
         throw new Error("Scanner not initialized");
       }
 
-      // Reset any previous scanning state
       try {
         codeReader.current.reset();
       } catch (err) {
         console.warn("Error resetting code reader:", err);
-        // If reset fails, create a new instance
         codeReader.current = new BrowserMultiFormatReader();
       }
 
-      // Stop any existing stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
@@ -110,7 +143,6 @@ export const useQRScanner = (): UseQRScannerReturn => {
       streamRef.current = stream;
       videoRef.current.srcObject = stream;
 
-      // Wait for video to be ready
       await new Promise<void>((resolve, reject) => {
         if (videoRef.current) {
           const handleLoadedMetadata = () => {
@@ -132,13 +164,12 @@ export const useQRScanner = (): UseQRScannerReturn => {
 
       setIsScanning(true);
 
-      // Start decoding from video stream
       codeReader.current.decodeFromVideoDevice(
         null,
         videoRef.current,
         (result: Result | null, error: unknown | undefined) => {
           if (result) {
-            setResult(result.getText());
+            addResult(result.getText());
           }
           if (
             error &&
@@ -158,7 +189,7 @@ export const useQRScanner = (): UseQRScannerReturn => {
       setIsScanning(false);
       console.error("QR Scanner error:", err);
     }
-  }, [initializeCodeReader]);
+  }, [initializeCodeReader, addResult]);
 
   const stopScanning = useCallback(() => {
     if (codeReader.current) {
@@ -182,18 +213,26 @@ export const useQRScanner = (): UseQRScannerReturn => {
     setError(null);
   }, []);
 
-  const clearResult = useCallback(() => {
-    setResult(null);
+  const clearResults = useCallback(() => {
+    setResults([]);
+    setSelectedResult(null);
     setError(null);
+    detectedCodes.current.clear();
+  }, []);
+
+  const selectResult = useCallback((result: QRResult) => {
+    setSelectedResult(result);
   }, []);
 
   return {
     videoRef,
     isScanning,
-    result,
+    results,
+    selectedResult,
     error,
     startScanning,
     stopScanning,
-    clearResult,
+    clearResults,
+    selectResult,
   };
 };
