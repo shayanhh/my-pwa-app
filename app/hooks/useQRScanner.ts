@@ -1,26 +1,39 @@
 import { useRef, useCallback, useState, useEffect } from "react";
 import { BrowserMultiFormatReader, Result } from "@zxing/library";
 
+interface ScannedQR {
+  text: string;
+  timestamp: number;
+  id: string;
+}
+
 interface UseQRScannerReturn {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   isScanning: boolean;
   result: string | null;
+  scannedHistory: ScannedQR[];
   error: string | null;
   startScanning: () => Promise<void>;
   stopScanning: () => void;
   clearResult: () => void;
+  clearHistory: () => void;
+  getLatestUniqueResult: () => string | null;
 }
 
 export const useQRScanner = (): UseQRScannerReturn => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  // Add this to track scanned codes
-  const scannedCodes = useRef<Set<string>>(new Set());
+  const scannedQRsRef = useRef<Set<string>>(new Set());
+  const lastScanTimeRef = useRef<number>(0);
 
   const [isScanning, setIsScanning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [scannedHistory, setScannedHistory] = useState<ScannedQR[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // Debounce time to prevent rapid re-scanning (in milliseconds)
+  const SCAN_DEBOUNCE_TIME = 2000;
 
   const initializeCodeReader = useCallback(() => {
     if (
@@ -49,6 +62,35 @@ export const useQRScanner = (): UseQRScannerReturn => {
       }
     };
   }, [initializeCodeReader]);
+
+  const addScannedQR = useCallback((qrText: string) => {
+    const now = Date.now();
+
+    // Check if we've scanned this QR recently (within debounce time)
+    if (scannedQRsRef.current.has(qrText)) {
+      return false; // Already scanned, don't add again
+    }
+
+    // Check debounce time to prevent too rapid scanning
+    if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_TIME) {
+      return false;
+    }
+
+    // Add to scanned set and history
+    scannedQRsRef.current.add(qrText);
+    lastScanTimeRef.current = now;
+
+    const newScannedQR: ScannedQR = {
+      text: qrText,
+      timestamp: now,
+      id: `qr_${now}_${Math.random().toString(36).substr(2, 9)}`,
+    };
+
+    setScannedHistory((prev) => [...prev, newScannedQR]);
+    setResult(qrText);
+
+    return true; // Successfully added new QR
+  }, []);
 
   const startScanning = useCallback(async () => {
     try {
@@ -142,10 +184,12 @@ export const useQRScanner = (): UseQRScannerReturn => {
         (result: Result | null, error: unknown | undefined) => {
           if (result) {
             const qrText = result.getText();
-            // Only set result if we haven't scanned this code before
-            if (!scannedCodes.current.has(qrText)) {
-              scannedCodes.current.add(qrText);
-              setResult(qrText);
+            const wasAdded = addScannedQR(qrText);
+
+            if (wasAdded) {
+              console.log(`New QR code scanned: ${qrText}`);
+            } else {
+              console.log(`QR code already scanned or debounced: ${qrText}`);
             }
           }
           if (
@@ -166,7 +210,7 @@ export const useQRScanner = (): UseQRScannerReturn => {
       setIsScanning(false);
       console.error("QR Scanner error:", err);
     }
-  }, [initializeCodeReader]);
+  }, [initializeCodeReader, addScannedQR]);
 
   const stopScanning = useCallback(() => {
     if (codeReader.current) {
@@ -193,17 +237,31 @@ export const useQRScanner = (): UseQRScannerReturn => {
   const clearResult = useCallback(() => {
     setResult(null);
     setError(null);
-    // Clear scanned codes when explicitly clearing result
-    scannedCodes.current.clear();
   }, []);
+
+  const clearHistory = useCallback(() => {
+    scannedQRsRef.current.clear();
+    setScannedHistory([]);
+    setResult(null);
+    setError(null);
+    lastScanTimeRef.current = 0;
+  }, []);
+
+  const getLatestUniqueResult = useCallback(() => {
+    if (scannedHistory.length === 0) return null;
+    return scannedHistory[scannedHistory.length - 1].text;
+  }, [scannedHistory]);
 
   return {
     videoRef,
     isScanning,
     result,
+    scannedHistory,
     error,
     startScanning,
     stopScanning,
     clearResult,
+    clearHistory,
+    getLatestUniqueResult,
   };
 };

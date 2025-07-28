@@ -6,6 +6,8 @@ import {
   ExternalLink,
   Loader2,
   QrCode,
+  Trash2,
+  Clock,
 } from "lucide-react";
 import { useEffect } from "react";
 import { useQRScanner } from "../hooks/useQRScanner";
@@ -17,10 +19,13 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
     videoRef,
     isScanning,
     result,
+    scannedHistory,
     error,
     startScanning,
     stopScanning,
     clearResult,
+    clearHistory,
+    getLatestUniqueResult,
   } = useQRScanner();
 
   useEffect(() => {
@@ -39,37 +44,24 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
     };
   }, []);
 
-  const copyToClipboard = async () => {
-    if (result) {
-      try {
-        await navigator.clipboard.writeText(result);
-        const button = document.activeElement as HTMLButtonElement;
-        if (button) {
-          const originalText = button.innerHTML;
-          button.innerHTML =
-            '<span class="flex items-center justify-center gap-2"><svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Copied!</span></span>';
-          setTimeout(() => {
-            if (button.innerHTML.includes("Copied!")) {
-              button.innerHTML = originalText;
-            }
-          }, 2000);
-        }
-      } catch (err) {
-        console.error("Failed to copy:", err);
-        alert("Failed to copy to clipboard");
-      }
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // Visual feedback could be added here
+      console.log("Copied to clipboard:", text);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+      alert("Failed to copy to clipboard");
     }
   };
 
-  const openLink = () => {
-    if (result) {
-      try {
-        const url = result.startsWith("http") ? result : `https://${result}`;
-        window.open(url, "_blank");
-      } catch (err) {
-        console.error("Invalid URL:", err);
-        alert("Invalid URL format");
-      }
+  const openLink = (text: string) => {
+    try {
+      const url = text.startsWith("http") ? text : `https://${text}`;
+      window.open(url, "_blank");
+    } catch (err) {
+      console.error("Invalid URL:", err);
+      alert("Invalid URL format");
     }
   };
 
@@ -92,7 +84,7 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
 
   const handleScanAgain = async () => {
     try {
-      clearResult(); // This now clears the scanned codes set too
+      clearResult();
       // Stop current scanning first
       stopScanning();
       // Add a small delay to ensure proper cleanup
@@ -104,7 +96,17 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
     }
   };
 
-  if (result) {
+  const formatTimestamp = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
+
+  // Show results view if we have scanned QR codes
+  if (scannedHistory.length > 0) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex flex-col">
         <div className="flex-shrink-0 p-4 bg-gradient-to-b from-black/60 to-transparent">
@@ -115,61 +117,76 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
             >
               <ArrowLeft className="w-6 h-6 text-white" />
             </button>
-            <h1 className="text-white font-semibold">QR Code Result</h1>
-            <div className="w-[44px]" />
+            <div className="text-center">
+              <h1 className="text-white font-semibold">QR Scan Results</h1>
+              <p className="text-white/70 text-sm">
+                {scannedHistory.length} code
+                {scannedHistory.length !== 1 ? "s" : ""} scanned
+              </p>
+            </div>
+            <button
+              onClick={clearHistory}
+              className="p-2 bg-red-500/40 rounded-full backdrop-blur-sm hover:bg-red-600/40 transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              <Trash2 className="w-5 h-5 text-white" />
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
-              <h3 className="font-semibold text-green-800">
-                Scanned Successfully!
-              </h3>
-            </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {scannedHistory.map((qr, index) => (
+            <div key={qr.id} className="bg-white rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  <span className="font-semibold text-green-800">
+                    QR #{scannedHistory.length - index}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-gray-500 text-xs">
+                  <Clock className="w-3 h-3" />
+                  <span>{formatTimestamp(qr.timestamp)}</span>
+                </div>
+              </div>
 
-            <div className="bg-gray-100 p-4 rounded-xl max-h-32 overflow-y-auto">
-              <p className="text-sm text-gray-700 break-all font-mono">
-                {result}
-              </p>
-            </div>
+              <div className="bg-gray-100 p-3 rounded-xl max-h-20 overflow-y-auto">
+                <p className="text-sm text-gray-700 break-all font-mono">
+                  {qr.text}
+                </p>
+              </div>
 
-            <div className="space-y-3">
-              <button
-                onClick={copyToClipboard}
-                className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-xl font-medium transition-colors touch-manipulation min-h-[48px]"
-              >
-                <Copy className="w-4 h-4 flex-shrink-0" />
-                <span>Copy to Clipboard</span>
-              </button>
-
-              {isUrl(result) && (
+              <div className="flex gap-2">
                 <button
-                  onClick={openLink}
-                  className="w-full flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-xl font-medium transition-colors touch-manipulation min-h-[48px]"
+                  onClick={() => copyToClipboard(qr.text)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors touch-manipulation"
                 >
-                  <ExternalLink className="w-4 h-4 flex-shrink-0" />
-                  <span>Open Link</span>
+                  <Copy className="w-4 h-4 flex-shrink-0" />
+                  <span>Copy</span>
                 </button>
-              )}
 
-              <button
-                onClick={handleScanAgain}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-xl font-medium transition-colors touch-manipulation min-h-[48px]"
-              >
-                <QrCode className="w-5 h-5 flex-shrink-0" />
-                <span>Scan Again</span>
-              </button>
+                {isUrl(qr.text) && (
+                  <button
+                    onClick={() => openLink(qr.text)}
+                    className="flex-1 flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors touch-manipulation"
+                  >
+                    <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                    <span>Open</span>
+                  </button>
+                )}
+              </div>
             </div>
+          ))}
+        </div>
 
-            {/* Optional: Show that this QR code won't be scanned again until reset */}
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-xs text-blue-600 text-center">
-                💡 This QR code won&apos;t be detected again until you tap
-                &quot;Scan Again&quot;
-              </p>
-            </div>
+        <div className="flex-shrink-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+          <div className="flex gap-3">
+            <button
+              onClick={handleScanAgain}
+              className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-xl font-medium transition-colors touch-manipulation"
+            >
+              <QrCode className="w-5 h-5 flex-shrink-0" />
+              <span>Continue Scanning</span>
+            </button>
           </div>
         </div>
       </div>
@@ -186,7 +203,15 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
           >
             <ArrowLeft className="w-6 h-6 text-white" />
           </button>
-          <h1 className="text-white font-semibold">QR Scanner</h1>
+          <div className="text-center">
+            <h1 className="text-white font-semibold">QR Scanner</h1>
+            {isScanning && scannedHistory.length > 0 && (
+              <p className="text-emerald-400 text-sm">
+                {scannedHistory.length} code
+                {scannedHistory.length !== 1 ? "s" : ""} found
+              </p>
+            )}
+          </div>
           <div className="w-[44px]" />
         </div>
       </div>
@@ -196,6 +221,18 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
           <div className="flex items-center gap-2 bg-red-500/90 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <p className="text-sm">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Latest scan notification */}
+      {isScanning && result && (
+        <div className="absolute top-20 left-4 right-4 z-30">
+          <div className="flex items-center gap-2 bg-emerald-500/90 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            <p className="text-sm">
+              QR code detected! Continue scanning or view results.
+            </p>
           </div>
         </div>
       )}
@@ -226,25 +263,11 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
           onError={(e) => console.error("Video error:", e)}
         />
 
-        {!isScanning && !result && (
+        {!isScanning && scannedHistory.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90">
             <div className="text-center">
               <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
               <p className="text-gray-400 text-lg">Starting camera...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Optional: Show scanning indicator overlay */}
-        {isScanning && !result && (
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div className="w-64 h-64 border-2 border-white/30 rounded-2xl relative">
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-2xl"></div>
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-2xl"></div>
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-2xl"></div>
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-2xl"></div>
-              </div>
             </div>
           </div>
         )}
@@ -255,18 +278,30 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-2 text-white">
               <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
-              <span className="text-sm">Scanning for QR codes...</span>
+              <span className="text-sm">
+                Scanning for QR codes...
+                {scannedHistory.length > 0 &&
+                  ` (${scannedHistory.length} found)`}
+              </span>
             </div>
-            <p className="text-white/70 text-xs">
-              Point your camera at a QR code. Each code will only be scanned
-              once.
-            </p>
-            <button
-              onClick={stopScanning}
-              className="bg-red-500/80 hover:bg-red-600/80 text-white px-6 py-3 rounded-full backdrop-blur-sm transition-colors touch-manipulation"
-            >
-              Stop Scanning
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={stopScanning}
+                className="flex-1 bg-red-500/80 hover:bg-red-600/80 text-white px-6 py-3 rounded-full backdrop-blur-sm transition-colors touch-manipulation"
+              >
+                Stop Scanning
+              </button>
+              {scannedHistory.length > 0 && (
+                <button
+                  onClick={() => {
+                    /* Show results by clearing result to trigger results view */
+                  }}
+                  className="flex-1 bg-blue-500/80 hover:bg-blue-600/80 text-white px-6 py-3 rounded-full backdrop-blur-sm transition-colors touch-manipulation"
+                >
+                  View Results ({scannedHistory.length})
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="text-center space-y-4">
