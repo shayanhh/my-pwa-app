@@ -15,11 +15,9 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
 }) => {
   const {
     videoRef,
-    canvasRef,
     isScanning,
     result,
     error,
-    qrPosition,
     startScanning,
     stopScanning,
     clearResult,
@@ -220,58 +218,6 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
           onError={(e) => console.error("Video error:", e)}
         />
 
-        {/* QR Code Overlay Canvas */}
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          style={{
-            mixBlendMode: "screen",
-          }}
-        />
-
-        {/* Scanning Frame Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="relative">
-            {/* Scanning Frame */}
-            <div className="w-64 h-64 border-2 border-white/30 rounded-2xl relative">
-              {/* Corner indicators */}
-              <div className="absolute -inset-2">
-                {/* Top-left */}
-                <div className="absolute top-0 left-0 w-8 h-8 border-l-4 border-t-4 border-white rounded-tl-lg"></div>
-                {/* Top-right */}
-                <div className="absolute top-0 right-0 w-8 h-8 border-r-4 border-t-4 border-white rounded-tr-lg"></div>
-                {/* Bottom-left */}
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-l-4 border-b-4 border-white rounded-bl-lg"></div>
-                {/* Bottom-right */}
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-r-4 border-b-4 border-white rounded-br-lg"></div>
-              </div>
-
-              {/* Scanning line animation */}
-              {isScanning && (
-                <div className="absolute inset-0 overflow-hidden rounded-2xl">
-                  <div className="absolute w-full h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-pulse">
-                    <div className="w-full h-full bg-green-400 animate-bounce"></div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* QR Detection Indicator */}
-            {qrPosition && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="bg-green-500/20 backdrop-blur-sm rounded-lg px-4 py-2 border-2 border-green-400">
-                  <div className="flex items-center gap-2 text-white">
-                    <CheckCircle className="w-5 h-5 animate-pulse" />
-                    <span className="text-sm font-medium">
-                      QR Code Detected!
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
         {!isScanning && !result && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90">
             <div className="text-center">
@@ -286,8 +232,8 @@ export const FullScreenQRScanner: React.FC<{ onBack: () => void }> = ({
         {isScanning ? (
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-2 text-white">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm">Point camera at QR code</span>
+              <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+              <span className="text-sm">Scanning for QR codes...</span>
             </div>
             <button
               onClick={stopScanning}

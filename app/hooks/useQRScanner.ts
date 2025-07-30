@@ -1,20 +1,11 @@
 import { useRef, useCallback, useState, useEffect } from "react";
-import { BrowserMultiFormatReader } from "@zxing/library";
-
-interface QRCodePosition {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import { BrowserMultiFormatReader, Result } from "@zxing/library";
 
 interface UseQRScannerReturn {
   videoRef: React.RefObject<HTMLVideoElement | null>;
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
   isScanning: boolean;
   result: string | null;
   error: string | null;
-  qrPosition: QRCodePosition | null;
   startScanning: () => Promise<void>;
   stopScanning: () => void;
   clearResult: () => void;
@@ -22,16 +13,11 @@ interface UseQRScannerReturn {
 
 export const useQRScanner = (): UseQRScannerReturn => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const scanningCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
   const [isScanning, setIsScanning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [qrPosition, setQrPosition] = useState<QRCodePosition | null>(null);
 
   const initializeCodeReader = useCallback(() => {
     if (
@@ -44,224 +30,10 @@ export const useQRScanner = (): UseQRScannerReturn => {
     }
   }, []);
 
-  // Function to draw QR code overlay
-  const drawQROverlay = useCallback((position: QRCodePosition) => {
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-
-    if (!canvas || !video) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Set canvas size to match video display size
-    const rect = video.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-
-    // Calculate scale factors
-    const scaleX = rect.width / video.videoWidth;
-    const scaleY = rect.height / video.videoHeight;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Scale position to display coordinates
-    const scaledPosition = {
-      x: position.x * scaleX,
-      y: position.y * scaleY,
-      width: position.width * scaleX,
-      height: position.height * scaleY,
-    };
-
-    // Draw QR code highlight
-    ctx.strokeStyle = "#00ff00";
-    ctx.lineWidth = 4;
-    ctx.setLineDash([]);
-
-    // Draw rectangle around QR code
-    ctx.strokeRect(
-      scaledPosition.x,
-      scaledPosition.y,
-      scaledPosition.width,
-      scaledPosition.height
-    );
-
-    // Draw corner indicators
-    const cornerSize = 20;
-    ctx.lineWidth = 6;
-
-    // Top-left corner
-    ctx.beginPath();
-    ctx.moveTo(scaledPosition.x, scaledPosition.y + cornerSize);
-    ctx.lineTo(scaledPosition.x, scaledPosition.y);
-    ctx.lineTo(scaledPosition.x + cornerSize, scaledPosition.y);
-    ctx.stroke();
-
-    // Top-right corner
-    ctx.beginPath();
-    ctx.moveTo(
-      scaledPosition.x + scaledPosition.width - cornerSize,
-      scaledPosition.y
-    );
-    ctx.lineTo(scaledPosition.x + scaledPosition.width, scaledPosition.y);
-    ctx.lineTo(
-      scaledPosition.x + scaledPosition.width,
-      scaledPosition.y + cornerSize
-    );
-    ctx.stroke();
-
-    // Bottom-left corner
-    ctx.beginPath();
-    ctx.moveTo(
-      scaledPosition.x,
-      scaledPosition.y + scaledPosition.height - cornerSize
-    );
-    ctx.lineTo(scaledPosition.x, scaledPosition.y + scaledPosition.height);
-    ctx.lineTo(
-      scaledPosition.x + cornerSize,
-      scaledPosition.y + scaledPosition.height
-    );
-    ctx.stroke();
-
-    // Bottom-right corner
-    ctx.beginPath();
-    ctx.moveTo(
-      scaledPosition.x + scaledPosition.width - cornerSize,
-      scaledPosition.y + scaledPosition.height
-    );
-    ctx.lineTo(
-      scaledPosition.x + scaledPosition.width,
-      scaledPosition.y + scaledPosition.height
-    );
-    ctx.lineTo(
-      scaledPosition.x + scaledPosition.width,
-      scaledPosition.y + scaledPosition.height - cornerSize
-    );
-    ctx.stroke();
-  }, []);
-
-  // Continuous scanning function using canvas to image conversion
-  const scanFrame = useCallback(async () => {
-    if (
-      !isScanning ||
-      !codeReader.current ||
-      !videoRef.current ||
-      !canvasRef.current
-    ) {
-      return;
-    }
-
-    const video = videoRef.current;
-
-    // Create a temporary canvas to capture video frame
-    if (!scanningCanvasRef.current) {
-      scanningCanvasRef.current = document.createElement("canvas");
-    }
-
-    const tempCanvas = scanningCanvasRef.current;
-    const tempCtx = tempCanvas.getContext("2d");
-
-    if (!tempCtx || video.videoWidth === 0 || video.videoHeight === 0) {
-      // Continue scanning if video not ready
-      if (isScanning) {
-        animationFrameRef.current = requestAnimationFrame(scanFrame);
-      }
-      return;
-    }
-
-    // Set canvas size to video dimensions
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
-
-    // Draw current video frame to canvas
-    tempCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-
-    try {
-      // Convert canvas to data URL and create image element
-      const dataUrl = tempCanvas.toDataURL("image/png");
-      const img = new Image();
-
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error("Failed to load image"));
-        img.src = dataUrl;
-      });
-
-      // Try to decode QR code from image
-      const result = await codeReader.current.decodeFromImage(img);
-
-      if (result) {
-        // Extract QR code position from result points
-        const resultPoints = result.getResultPoints();
-        if (resultPoints && resultPoints.length >= 2) {
-          const points = Array.from(resultPoints);
-          const minX = Math.min(
-            ...points.map((p: { getX(): number }) => p.getX())
-          );
-          const maxX = Math.max(
-            ...points.map((p: { getX(): number }) => p.getX())
-          );
-          const minY = Math.min(
-            ...points.map((p: { getY(): number }) => p.getY())
-          );
-          const maxY = Math.max(
-            ...points.map((p: { getY(): number }) => p.getY())
-          );
-
-          const position: QRCodePosition = {
-            x: Math.max(0, minX - 20),
-            y: Math.max(0, minY - 20),
-            width: maxX - minX + 40,
-            height: maxY - minY + 40,
-          };
-
-          setQrPosition(position);
-          drawQROverlay(position);
-
-          // Set result after a brief delay to show the highlight
-          setTimeout(() => {
-            setResult(result.getText());
-            setIsScanning(false);
-          }, 500);
-
-          return;
-        } else {
-          setResult(result.getText());
-          setIsScanning(false);
-          return;
-        }
-      }
-    } catch (err) {
-      // NotFoundException is expected when no QR code is found
-      if (err instanceof Error && err.name !== "NotFoundException") {
-        console.error("QR Scanner error:", err);
-      }
-    }
-
-    // Clear any previous overlay if no QR code found
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-    setQrPosition(null);
-
-    // Continue scanning
-    if (isScanning) {
-      animationFrameRef.current = requestAnimationFrame(scanFrame);
-    }
-  }, [isScanning, drawQROverlay]);
-
   useEffect(() => {
     initializeCodeReader();
 
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
       if (codeReader.current) {
         try {
           codeReader.current.reset();
@@ -272,10 +44,6 @@ export const useQRScanner = (): UseQRScannerReturn => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
-      // Clean up temporary canvas
-      if (scanningCanvasRef.current) {
-        scanningCanvasRef.current = null;
-      }
     };
   }, [initializeCodeReader]);
 
@@ -283,7 +51,6 @@ export const useQRScanner = (): UseQRScannerReturn => {
     try {
       setError(null);
       setIsScanning(false);
-      setQrPosition(null);
 
       if (typeof window === "undefined") {
         throw new Error("QR Scanner is only available in browser environment");
@@ -296,6 +63,7 @@ export const useQRScanner = (): UseQRScannerReturn => {
         throw new Error("Camera access is not supported by this browser");
       }
 
+      // Always ensure we have a fresh code reader instance
       if (!codeReader.current) {
         console.log("Initializing new code reader");
         initializeCodeReader();
@@ -310,6 +78,7 @@ export const useQRScanner = (): UseQRScannerReturn => {
         codeReader.current.reset();
       } catch (err) {
         console.warn("Error resetting code reader:", err);
+        // If reset fails, create a new instance
         codeReader.current = new BrowserMultiFormatReader();
       }
 
@@ -348,8 +117,7 @@ export const useQRScanner = (): UseQRScannerReturn => {
             videoRef.current
               ?.play()
               .then(() => {
-                // Wait a bit more for video to be fully ready
-                setTimeout(resolve, 100);
+                resolve();
               })
               .catch(reject);
           };
@@ -364,8 +132,25 @@ export const useQRScanner = (): UseQRScannerReturn => {
 
       setIsScanning(true);
 
-      // Start the scanning loop
-      animationFrameRef.current = requestAnimationFrame(scanFrame);
+      // Start decoding from video stream
+      codeReader.current.decodeFromVideoDevice(
+        null,
+        videoRef.current,
+        (result: Result | null, error: unknown | undefined) => {
+          if (result) {
+            setResult(result.getText());
+          }
+          if (
+            error &&
+            typeof error === "object" &&
+            error !== null &&
+            "name" in error &&
+            (error as { name?: string }).name !== "NotFoundException"
+          ) {
+            console.error("QR Scanner error:", error);
+          }
+        }
+      );
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to start QR scanner";
@@ -373,14 +158,9 @@ export const useQRScanner = (): UseQRScannerReturn => {
       setIsScanning(false);
       console.error("QR Scanner error:", err);
     }
-  }, [initializeCodeReader, scanFrame]);
+  }, [initializeCodeReader]);
 
   const stopScanning = useCallback(() => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
     if (codeReader.current) {
       try {
         codeReader.current.reset();
@@ -398,32 +178,20 @@ export const useQRScanner = (): UseQRScannerReturn => {
       videoRef.current.srcObject = null;
     }
 
-    // Clear canvas
-    if (canvasRef.current) {
-      const ctx = canvasRef.current.getContext("2d");
-      if (ctx) {
-        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      }
-    }
-
     setIsScanning(false);
     setError(null);
-    setQrPosition(null);
   }, []);
 
   const clearResult = useCallback(() => {
     setResult(null);
     setError(null);
-    setQrPosition(null);
   }, []);
 
   return {
     videoRef,
-    canvasRef,
     isScanning,
     result,
     error,
-    qrPosition,
     startScanning,
     stopScanning,
     clearResult,
